@@ -53,6 +53,7 @@ button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
   transition-timing-function: calc();
+  transition: prop4 time4;
 }
 
 @media (prefers-color-scheme: light) {
