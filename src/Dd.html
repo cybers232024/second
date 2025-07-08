@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo List App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        
+        .task-completed {
+            text-decoration: line-through;
+            color: #94a3b8;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .priority-high {
+            border-left: 4px solid #ef4444;
+        }
+        
+        .priority-medium {
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .priority-low {
+            border-left: 4px solid #10b981;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div class="container mx-auto px-4 py-12 max-w-3xl">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-indigo-800 mb-2">Todo List</h1>
+            <p class="text-gray-600">Stay organized and productive</p>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
+            <div class="p-6">
+                <div class="flex gap-4">
+                    <input 
+                        type="text" 
+                        id="newTaskInput" 
+                        placeholder="Add a new task..." 
+                        class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                    <button 
+                        id="addTaskBtn" 
+                        class="px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                    >
+                        Add
+                    </button>
+                </div>
+                
+                <div class="mt-4 flex items-center gap-4">
+                    <select 
+                        id="prioritySelect" 
+                        class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                        <option value="low">Low Priority</option>
+                        <option value="medium" selected>Medium Priority</option>
+                        <option value="high">High Priority</option>
+                    </select>
+                    
+                    <input 
+                        type="date" 
+                        id="dueDateInput" 
+                        class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-gray-800">My Tasks</h2>
+                    <div class="flex items-center gap-2">
+                        <button id="filterAll" class="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">All</button>
+                        <button id="filterActive" class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-medium">Active</button>
+                        <button id="filterCompleted" class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-medium">Completed</button>
+                    </div>
+                </div>
+                
+                <ul id="taskList" class="divide-y divide-gray-200">
+                    <!-- Tasks will be added here dynamically -->
+                </ul>
+                
+                <div id="emptyState" class="py-12 text-center">
+                    <img src="https://placehold.co/300x200" alt="Empty todo list showing a clipboard with checkboxes and a pencil" class="mx-auto mb-4 rounded-lg" />
+                    <h3 class="text-lg font-medium text-gray-700">No tasks yet</h3>
+                    <p class="text-gray-500">Add your first task to get started</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center text-gray-500 text-sm">
+            <p>Created with HTML, CSS & JavaScript</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const taskList = document.getElementById('taskList');
+            const newTaskInput = document.getElementById('newTaskInput');
+            const addTaskBtn = document.getElementById('addTaskBtn');
+            const prioritySelect = document.getElementById('prioritySelect');
+            const dueDateInput = document.getElementById('dueDateInput');
+            const emptyState = document.getElementById('emptyState');
+            const filterAll = document.getElementById('filterAll');
+            const filterActive = document.getElementById('filterActive');
+            const filterCompleted = document.getElementById('filterCompleted');
+            
+            let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+            let currentFilter = 'all';
+            
+            // Initialize the app
+            renderTasks();
+            updateEmptyState();
+            
+            // Add task event listener
+            addTaskBtn.addEventListener('click', addTask);
+            newTaskInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addTask();
+            });
+            
+            // Filter event listeners
+            filterAll.addEventListener('click', () => setFilter('all'));
+            filterActive.addEventListener('click', () => setFilter('active'));
+            filterCompleted.addEventListener('click', () => setFilter('completed'));
+            
+            function addTask() {
+                const taskText = newTaskInput.value.trim();
+                if (taskText === '') return;
+                
+                const newTask = {
+                    id: Date.now(),
+                    text: taskText,
+                    completed: false,
+                    priority: prioritySelect.value,
+                    dueDate: dueDateInput.value,
+                    createdAt: new Date().toISOString()
+                };
+                
+                tasks.unshift(newTask);
+                saveTasks();
+                renderTasks();
+                updateEmptyState();
+                
+                newTaskInput.value = '';
+                dueDateInput.value = '';
+                prioritySelect.value = 'medium';
+                newTaskInput.focus();
+            }
+            
+            function renderTasks() {
+                taskList.innerHTML = '';
+                
+                const filteredTasks = tasks.filter(task => {
+                    if (currentFilter === 'all') return true;
+                    if (currentFilter === 'active') return !task.completed;
+                    if (currentFilter === 'completed') return task.completed;
+                    return true;
+                });
+                
+                if (filteredTasks.length === 0 && tasks.length > 0) {
+                    taskList.innerHTML = `
+                        <li class="py-4 text-center text-gray-500">
+                            No ${currentFilter} tasks found
+                        </li>
+                    `;
+                    return;
+                }
+                
+                filteredTasks.forEach(task => {
+                    const taskElement = document.createElement('li');
+                    taskElement.className = `py-4 px-2 hover:bg-gray-50 transition-colors fade-in ${task.priority}-priority`;
+                    
+                    // Format due date
+                    let dueDateText = '';
+                    if (task.dueDate) {
+                        const dueDate = new Date(task.dueDate);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        
+                        if (dueDate < today && !task.completed) {
+                            dueDateText = `<span class="text-red-500 ml-2 text-sm">Overdue</span>`;
+                        } else {
+                            dueDateText = `<span class="text-gray-500 ml-2 text-sm">Due: ${dueDate.toLocaleDateString()}</span>`;
+                        }
+                    }
+                    
+                    taskElement.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <input 
+                                    type="checkbox" 
+                                    ${task.completed ? 'checked' : ''}
+                                    class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mr-3"
+                                    data-id="${task.id}"
+                                >
+                                <span class="${task.completed ? 'task-completed' : ''}">
+                                    ${task.text}
+                                    ${dueDateText}
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button 
+                                    class="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                                    data-id="${task.id}"
+                                    data-action="edit"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                    </svg>
+                                </button>
+                                <button 
+                                    class="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                                    data-id="${task.id}"
+                                    data-action="delete"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    taskList.appendChild(taskElement);
+                });
+                
+                // Add event listeners to all checkboxes
+                document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.addEventListener('change', toggleTaskCompleted);
+                });
+                
+                // Add event listeners to edit and delete buttons
+                document.querySelectorAll('button[data-action="edit"]').forEach(button => {
+                    button.addEventListener('click', editTask);
+                });
+                
+                document.querySelectorAll('button[data-action="delete"]').forEach(button => {
+                    button.addEventListener('click', deleteTask);
+                });
+            }
+            
+            function toggleTaskCompleted(e) {
+                const taskId = parseInt(e.target.dataset.id);
+                const task = tasks.find(task => task.id === taskId);
+                
+                if (task) {
+                    task.completed = e.target.checked;
+                    saveTasks();
+                    renderTasks();
+                    updateEmptyState();
+                }
+            }
+            
+            function editTask(e) {
+                const taskId = parseInt(e.currentTarget.dataset.id);
+                const task = tasks.find(task => task.id === taskId);
+                
+                if (task) {
+                    const newText = prompt('Edit task:', task.text);
+                    if (newText !== null) {
+                        task.text = newText.trim();
+                        saveTasks();
+                        renderTasks();
+                    }
+                }
+            }
+            
+            function deleteTask(e) {
+                const taskId = parseInt(e.currentTarget.dataset.id);
+                tasks = tasks.filter(task => task.id !== taskId);
+                saveTasks();
+                renderTasks();
+                updateEmptyState();
+            }
+            
+            function saveTasks() {
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+            }
+            
+            function updateEmptyState() {
+                if (tasks.length === 0) {
+                    emptyState.style.display = 'block';
+                } else {
+                    emptyState.style.display = 'none';
+                }
+            }
+            
+            function setFilter(filter) {
+                currentFilter = filter;
+                
+                // Update filter button styles
+                document.querySelectorAll('#filterAll, #filterActive, #filterCompleted').forEach(btn => {
+                    btn.classList.remove('bg-indigo-100', 'text-indigo-800');
+                    btn.classList.add('bg-gray-100', 'text-gray-800');
+                });
+                
+                const activeButton = document.getElementById(`filter${filter.charAt(0).toUpperCase() + filter.slice(1)}`);
+                activeButton.classList.remove('bg-gray-100', 'text-gray-800');
+                activeButton.classList.add('bg-indigo-100', 'text-indigo-800');
+                
+                renderTasks();
+            }
+        });
+    </script>
+</body>
+</html>
